@@ -1,12 +1,14 @@
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from reviews.models import Comment, Review, Title
 from reviews.pagination import CommentsPagination, ReviewsPagination
+from reviews.permissions import IsAdminOrModerator
 
 from .serializers import CommentSerializer, ReviewSerializer, TitleSerializer
-from reviews.permissions import IsAdminOrModerator
+
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
@@ -21,7 +23,7 @@ class AllReviewViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     pagination_class = ReviewsPagination
-    permission_classes = [IsAdminOrModerator]
+    # permission_classes = [IsAdminOrModerator]
 
     def get_title(self):
         title_id = self.kwargs.get('title_id')
@@ -36,11 +38,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title = self.get_title()
         serializer.save(author=self.request.user, title=title)
 
+    # @action(detail=True, methods=['update'], permission_classes=[IsAdminOrModerator])
     def perform_update(self, serializer):
         if serializer.instance.author != self.request.user:
             raise PermissionDenied(status.HTTP_403_FORBIDDEN)
         super(ReviewViewSet, self).perform_update(serializer)
 
+    # @action(detail=True, methods=['destroy'], permission_classes=[IsAdminOrModerator])
     def perform_destroy(self, instance):
         if instance.author != self.request.user:
             raise PermissionDenied(status.HTTP_403_FORBIDDEN)
@@ -55,7 +59,7 @@ class AllCommentViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     pagination_class = CommentsPagination
-    permission_classes = [IsAdminOrModerator]
+    # permission_classes = [IsAdminOrModerator]
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
@@ -78,11 +82,13 @@ class CommentViewSet(viewsets.ModelViewSet):
             raise NotFound()
         serializer.save(author=self.request.user, review=review)
 
+    # @action(detail=True, permission_classes=[IsAdminOrModerator])
     def perform_update(self, serializer):
         if serializer.instance.author != self.request.user:
             raise PermissionDenied(status.HTTP_403_FORBIDDEN)
         super(CommentViewSet, self).perform_update(serializer)
 
+    # @action(detail=True, permission_classes=[IsAdminOrModerator])
     def perform_destroy(self, instance):
         if instance.author != self.request.user:
             raise PermissionDenied(status.HTTP_403_FORBIDDEN)
